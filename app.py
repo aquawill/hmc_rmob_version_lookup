@@ -164,6 +164,8 @@ def update_cache():
 
 # 8. Lookup version by `hmc_version`
 def lookup_version(hmc_version, region=None):
+    if region is not None:
+        region = region.upper()
     if cached_json_data is None:
         return {"error": "Data is not available yet. Try again later."}
 
@@ -191,13 +193,15 @@ def lookup_version(hmc_version, region=None):
 
 # 9. Reverse lookup by `dvn`
 def reverse_lookup_version(dvn, region=None):
+    if region is not None:
+        region = region.upper()
     if cached_json_data is None:
         return {"error": "Data is not available yet. Try again later."}
 
 
     results = []
     for entry in cached_json_data.get("compatibility", []):
-        entry_region = entry["region"]
+        entry_region = str(entry["region"]).upper()
         entry_dvn = entry["dvn"]
 
         if entry_dvn == dvn and (region is None or entry_region == region):
