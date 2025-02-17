@@ -253,6 +253,10 @@ def api_reverse_lookup():
 def health_check():
     return jsonify({"status": "ok", "message": "Healthy"}), 200
 
+@app.route('/', methods=['GET'])
+def root():
+    return 'https://github.com/aquawill/hmc_rmob_version_lookup', 200
+
 # Start Flask server with cache initialization
 if __name__ == "__main__":
     print("Initializing cache...")
