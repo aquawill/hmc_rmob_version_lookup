@@ -238,6 +238,9 @@ def api_reverse_lookup():
     lookup_result = reverse_lookup_version(dvn, region)
     return jsonify(lookup_result)
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "ok", "message": "Healthy"}), 200
 
 # Start Flask server with cache initialization
 if __name__ == "__main__":
