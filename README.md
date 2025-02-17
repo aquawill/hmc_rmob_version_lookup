@@ -79,17 +79,14 @@ curl "http://localhost:10000/health"
 ```yaml
 services:
   - type: web
-    name: hmc-rmob-api
+    name: flask-api
     env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "python flask_api.py"
+    plan: free
+    buildCommand: ""
+    startCommand: gunicorn app:app
     envVars:
-      - key: HERE_CLIENT_ID
-        sync: false
-      - key: HERE_CLIENT_SECRET
-        sync: false
-      - key: HERE_TOKEN_URL
-        value: "https://account.api.here.com/oauth2/token"
+      - key: FLASK_ENV
+        value: production
 ```
 2. Push the code to **GitHub**:
 ```sh
