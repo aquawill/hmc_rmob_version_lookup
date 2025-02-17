@@ -63,7 +63,9 @@ def get_oauth_token():
                       headers={'Content-Type': 'application/x-www-form-urlencoded'})
 
     if r.status_code == 200:
-        return r.json()["access_token"]
+        token = r.json()["access_token"]
+        print(token)
+        return token
     else:
         raise Exception(f"OAuth2 Token error: {r.text}")
 
@@ -192,6 +194,7 @@ def reverse_lookup_version(dvn, region=None):
     if cached_json_data is None:
         return {"error": "Data is not available yet. Try again later."}
 
+
     results = []
     for entry in cached_json_data.get("compatibility", []):
         entry_region = entry["region"]
@@ -222,6 +225,8 @@ def api_lookup():
     if hmc_version is None:
         return jsonify({"error": "Missing required parameter: hmc_version"}), 400
 
+    fetch_pbf_and_cache()
+
     lookup_result = lookup_version(hmc_version, region)
     return jsonify(lookup_result)
 
@@ -235,6 +240,8 @@ def api_reverse_lookup():
     if not dvn:
         return jsonify({"error": "Missing required parameter: dvn"}), 400
 
+    fetch_pbf_and_cache()
+
     lookup_result = reverse_lookup_version(dvn, region)
     return jsonify(lookup_result)
 
@@ -244,5 +251,6 @@ def health_check():
 
 # Start Flask server with cache initialization
 if __name__ == "__main__":
-    fetch_pbf_and_cache()  # Fetch PBF data when starting the API
+    print("Initializing cache...")
+    fetch_pbf_and_cache()  # Fetch PBF data on startup
     app.run(host="0.0.0.0", port=10000, debug=True)
