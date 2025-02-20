@@ -78,8 +78,7 @@ def get_oauth_token():
         if response.status_code == 200:
             data = response.json()
             TOKEN_CACHE["token"] = data["access_token"]
-            # TOKEN_CACHE["expires_at"] = time.time() + data.get("expires_in", 3600)  # Default 1-hour expiration
-            TOKEN_CACHE["expires_at"] = time.time() + 10
+            TOKEN_CACHE["expires_at"] = time.time() + data.get("expires_in", 3600)  # Default 1-hour expiration
             return TOKEN_CACHE["token"]
         elif response.status_code == 401:
             raise Exception("Invalid credentials: Authentication failed (401 Unauthorized). Please check API keys.")
