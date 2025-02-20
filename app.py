@@ -3,7 +3,7 @@ import os
 from flask import Flask, request, jsonify
 
 import api_request_handler
-from opensearch_version_query_service import get_opensearch_hmc_dvn_worker
+from opensearch_version_query_service import get_opensearch_hmc_dvn_worker, get_latest_catalog_version
 from rmob_version_query_service import fetch_pbf_and_cache, get_rmob_dvn_query_worker, get_hmc_dvn_query_worker
 
 app = Flask(__name__)
@@ -47,7 +47,7 @@ def get_opensearch_dependencies():
     target_hrn = request.args.get("target_hrn", type=str)
 
     if not opensearch_version:
-        return jsonify({"error": "Missing required parameter: opensearch_version"}), 400
+        return jsonify(get_opensearch_hmc_dvn_worker(get_latest_catalog_version(api_request_handler.get_oauth_token()), target_hrn))
     if not target_hrn:
         return jsonify({"error": "Missing required parameter: target_hrn"}), 400
 
