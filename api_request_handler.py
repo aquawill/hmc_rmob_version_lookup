@@ -97,7 +97,7 @@ def validate_credentials():
         # If no valid token is cached, request one and store it in TOKEN_CACHE
         if not TOKEN_CACHE["token"] or time.time() >= TOKEN_CACHE["expires_at"]:
             token = get_oauth_token()
-            print("✅ Credentials validated successfully. Token acquired!!!")
+            print("✅ Credentials validated successfully. Token acquired.")
         else:
             print("✅ Credentials validated. Using cached Token.")
         return True
