@@ -4,6 +4,7 @@ from google.protobuf.json_format import MessageToDict
 
 import api_request_handler
 import product_compatibility_partition_pb2
+import opensearch_version_query_service
 
 # Global cache
 cached_json_data = None
@@ -80,7 +81,7 @@ def fetch_pbf_and_cache():
             raise Exception(f"Failed to download and parse PBF: {response.text}")
 
 
-def get_rmob_dvn_query_worker(hmc_version, region=None):
+def get_rmob_dvn_query_worker(hmc_version, region=None, target_hrn=None):
     if cached_json_data is None:
         return {"error": "Data is not available yet. Try again later."}
 
@@ -95,12 +96,17 @@ def get_rmob_dvn_query_worker(hmc_version, region=None):
         for catalog in entry.get("catalogs", []):
             min_v = catalog.get("min_version", 0)
             max_v = catalog.get("max_version", float("inf"))
+            catalog_hrn = catalog.get("hrn")
+            if not target_hrn:
+                if min_v <= hmc_version <= max_v:
+                    results.append({"region": entry_region, "rmob_dvn": entry_dvn})
+            if target_hrn:
+                if catalog_hrn == target_hrn:
+                    if min_v <= hmc_version <= max_v:
+                        results.append({"region": entry_region, "rmob_dvn": entry_dvn})
 
-            if min_v <= hmc_version <= max_v:
-                results.append({"region": entry_region, "rmob_dvn": entry_dvn})
-
-    return {"hmc_dvn": hmc_version, "matches": results} if results else \
-        {"hmc_dvn": hmc_version, "message": "No matching version found"}
+    return {"matches": results} if results else \
+        {"message": "No matching version found"}
 
 
 def get_hmc_dvn_query_worker(dvn, region=None):
@@ -115,11 +121,16 @@ def get_hmc_dvn_query_worker(dvn, region=None):
 
         if entry_dvn == dvn and (region is None or entry_region.upper() == region.upper()):
             for catalog in entry.get("catalogs", []):
+                min_version = catalog.get("min_version")
+                max_version = catalog.get("max_version")
+                # catalog_hrn = catalog["hrn"]
+                # opensearch_matching = opensearch_version_query_service.filter_opensearch_versions_by_hrn(catalog_hrn, min_version, max_version)
                 catalog_data = {
                     "catalog_type": catalog["catalog_type"],
                     "hrn": catalog["hrn"],
-                    "min_version": catalog.get("min_version"),
-                    "max_version": catalog.get("max_version")
+                    "min_version": min_version,
+                    "max_version": max_version,
+                    # "opensearch_versions": opensearch_matching
                 }
 
                 # 初始化該 region，如果還沒有出現過

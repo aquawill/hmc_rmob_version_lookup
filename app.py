@@ -1,9 +1,9 @@
 import os
-import time
 
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify
 
 import api_request_handler
+from opensearch_version_query_service import get_opensearch_hmc_dvn_worker
 from rmob_version_query_service import fetch_pbf_and_cache, get_rmob_dvn_query_worker, get_hmc_dvn_query_worker
 
 app = Flask(__name__)
@@ -39,6 +39,19 @@ def get_hmc_dvn():
 
     fetch_pbf_and_cache()
     return jsonify(get_hmc_dvn_query_worker(rmob_dvn, region))
+
+
+@app.route("/get_opensearch_dependencies", methods=["GET"])
+def get_opensearch_dependencies():
+    opensearch_version = request.args.get("opensearch_version", type=int)
+    target_hrn = request.args.get("target_hrn", type=str)
+
+    if not opensearch_version:
+        return jsonify({"error": "Missing required parameter: opensearch_version"}), 400
+    if not target_hrn:
+        return jsonify({"error": "Missing required parameter: target_hrn"}), 400
+
+    return jsonify(get_opensearch_hmc_dvn_worker(opensearch_version, target_hrn))
 
 
 @app.route('/health', methods=['GET'])
