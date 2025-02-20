@@ -52,3 +52,27 @@ def get_oauth_token():
             return TOKEN_CACHE["token"]
         else:
             raise Exception(f"OAuth2 Token error: {response.text}")
+
+def request_with_token_refresh(url, method="GET", retry=True):
+    """
+    執行 API 請求，若回應 401 則自動刷新 Token 並重試一次
+    """
+    def make_request(token):
+        headers = {"Authorization": f"Bearer {token}"}
+        if method == "GET":
+            return requests.get(url, headers=headers)
+        elif method == "POST":
+            return requests.post(url, headers=headers)
+        else:
+            raise ValueError("Unsupported HTTP method")
+
+    token = get_oauth_token()
+    response = make_request(token)
+
+    # 如果回應是 401，則刷新 Token 並重試一次
+    if response.status_code == 401 and retry:
+        print("[WARN] Token expired, refreshing and retrying...")
+        token = get_oauth_token()  # 重新取得 Token
+        response = make_request(token)  # 重新發送請求
+
+    return response
