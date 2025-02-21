@@ -46,6 +46,8 @@ def get_opensearch_dependencies():
     opensearch_version = request.args.get("opensearch_version", type=int)
     target_hrn = request.args.get("target_hrn", type=str)
 
+    fetch_pbf_and_cache()  # 確保快取已更新
+
     if not opensearch_version:
         return jsonify(get_opensearch_hmc_dvn_worker(get_latest_catalog_version(api_request_handler.get_oauth_token()), target_hrn))
     if not target_hrn:
