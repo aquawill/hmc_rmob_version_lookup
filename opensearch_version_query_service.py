@@ -137,6 +137,6 @@ def get_opensearch_hmc_dvn_worker(oepnsearch_version, target_hrn):
             if dependency.get("hrn") == target_hrn:
                 target_version = dependency.get("version")
                 matches = rmob_version_query_service.get_rmob_dvn_query_worker(target_version, target_hrn=target_hrn)
-                matches["catalog_hrn"] = target_hrn
-                matches["catalog_dvn"] = target_version
-                return matches
+                # matches["catalog_hrn"] = target_hrn
+                # matches["catalog_dvn"] = target_version
+                return {"opensearch_version": oepnsearch_version, "matches": matches}

@@ -19,9 +19,8 @@ DEBUG_TOKEN = os.getenv("DEBUG_TOKEN", "changeme")
 
 @app.route("/get_rmob_dvn", methods=["GET"])
 def get_rmob_dvn():
-    hmc_dvn = request.args.get("hmc_dvn", type=int)
+    hmc_dvn = request.args.get("hmc_dvn", type=str)
     region = request.args.get("rmob_region", type=str)
-
     if hmc_dvn is None:
         return jsonify({"error": "Missing required parameter: hmc_dvn"}), 400
 
@@ -43,13 +42,19 @@ def get_hmc_dvn():
 
 @app.route("/get_opensearch_dependencies", methods=["GET"])
 def get_opensearch_dependencies():
-    opensearch_version = request.args.get("opensearch_version", type=int)
+    opensearch_version = request.args.get("opensearch_version", type=str)
     target_hrn = request.args.get("target_hrn", type=str)
 
     fetch_pbf_and_cache()  # 確保快取已更新
 
     if not opensearch_version:
-        return jsonify(get_opensearch_hmc_dvn_worker(get_latest_catalog_version(api_request_handler.get_oauth_token()), target_hrn))
+        opensearch_version = get_latest_catalog_version(api_request_handler.get_oauth_token())
+    else:
+        try:
+            opensearch_version = int(opensearch_version)
+        except ValueError:
+            if opensearch_version == "latest":
+                opensearch_version = get_latest_catalog_version(api_request_handler.get_oauth_token())
     if not target_hrn:
         return jsonify({"error": "Missing required parameter: target_hrn"}), 400
 

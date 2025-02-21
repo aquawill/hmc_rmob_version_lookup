@@ -4,20 +4,21 @@ from google.protobuf.json_format import MessageToDict
 
 import api_request_handler
 import product_compatibility_partition_pb2
-import opensearch_version_query_service
 
 # Global cache
 cached_json_data = None
 cached_version = None
 lock = threading.Lock()  # Prevent race conditions when updating cache
 
-CATALOG_HRN = "hrn:here:data::olp-here:rib-product-compatibility-1"
+RIB_PRODUCT_COMPATIBILITY_1_CATALOG_HRN = "hrn:here:data::olp-here:rib-product-compatibility-1"
+RIB_2_CATALOG_HRN = "hrn:here:data::olp-here:rib-2"
+RIB_EXTERNAL_REFERENCE_2_CATALOG_HRN = "hrn:here:data::olp-here:rib-external-references-2"
 BASE_URL = "https://mabcd.metadata.data.api.platform.here.com/metadata/v1/catalogs"
 BLOBSTORE_URL = "https://mabcd.blob.data.api.platform.here.com/blobstore/v1/catalogs"
 
 
-def get_latest_catalog_version(token):
-    url = f"{BASE_URL}/{CATALOG_HRN}/versions/latest?startVersion=0"
+def get_latest_catalog_version(catalog_hrn, token):
+    url = f"{BASE_URL}/{catalog_hrn}/versions/latest?startVersion=0"
     response = api_request_handler.request_with_token_refresh(url)
 
     if response.status_code == 200:
@@ -28,7 +29,7 @@ def get_latest_catalog_version(token):
 
 # 3. Get latest layer version
 def get_layer_versions(token, catalog_version):
-    url = f"{BASE_URL}/{CATALOG_HRN}/layerVersions?version={catalog_version}"
+    url = f"{BASE_URL}/{RIB_PRODUCT_COMPATIBILITY_1_CATALOG_HRN}/layerVersions?version={catalog_version}"
     response = api_request_handler.request_with_token_refresh(url)
 
     if response.status_code == 200:
@@ -42,7 +43,7 @@ def get_layer_versions(token, catalog_version):
 
 # 4. Get partition data handle
 def get_data_handle(token, layer_version):
-    url = f"{BASE_URL}/{CATALOG_HRN}/layers/versions/partitions?version={layer_version}"
+    url = f"{BASE_URL}/{RIB_PRODUCT_COMPATIBILITY_1_CATALOG_HRN}/layers/versions/partitions?version={layer_version}"
     response = api_request_handler.request_with_token_refresh(url)
 
     if response.status_code == 200:
@@ -58,7 +59,7 @@ def get_data_handle(token, layer_version):
 def fetch_pbf_and_cache():
     global cached_json_data, cached_version
     token = api_request_handler.get_oauth_token()
-    latest_version = get_latest_catalog_version(token)
+    latest_version = get_latest_catalog_version(RIB_PRODUCT_COMPATIBILITY_1_CATALOG_HRN, token)
 
     with lock:
         if cached_version == latest_version:
@@ -68,7 +69,7 @@ def fetch_pbf_and_cache():
         data_handle = get_data_handle(token, layer_version)
 
         # 下載 PBF
-        url = f"{BLOBSTORE_URL}/{CATALOG_HRN}/layers/versions/data/{data_handle}"
+        url = f"{BLOBSTORE_URL}/{RIB_PRODUCT_COMPATIBILITY_1_CATALOG_HRN}/layers/versions/data/{data_handle}"
         response = api_request_handler.request_with_token_refresh(url)
 
         if response.status_code == 200:
@@ -84,7 +85,11 @@ def fetch_pbf_and_cache():
 def get_rmob_dvn_query_worker(hmc_version, region=None, target_hrn=None):
     if cached_json_data is None:
         return {"error": "Data is not available yet. Try again later."}
-
+    try:
+        hmc_version = int(hmc_version)
+    except ValueError:
+        if hmc_version == 'latest':
+            hmc_version = get_latest_catalog_version(RIB_2_CATALOG_HRN, api_request_handler.get_oauth_token())
     results = []
     for entry in cached_json_data.get("compatibility", []):
         entry_region = entry["region"]
@@ -94,19 +99,21 @@ def get_rmob_dvn_query_worker(hmc_version, region=None, target_hrn=None):
             continue
 
         for catalog in entry.get("catalogs", []):
-            min_v = catalog.get("min_version", 0)
-            max_v = catalog.get("max_version", float("inf"))
-            catalog_hrn = catalog.get("hrn")
-            if not target_hrn:
-                if min_v <= hmc_version <= max_v:
-                    results.append({"region": entry_region, "rmob_dvn": entry_dvn})
-            if target_hrn:
-                if catalog_hrn == target_hrn:
+            if catalog["catalog_type"] == "HERE_MAP_CONTENT":
+                min_v = catalog.get("min_version", 0)
+                max_v = catalog.get("max_version", float("inf"))
+                catalog_hrn = catalog.get("hrn")
+                if not target_hrn:
                     if min_v <= hmc_version <= max_v:
                         results.append({"region": entry_region, "rmob_dvn": entry_dvn})
+                if target_hrn:
+                    if catalog_hrn == target_hrn:
+                        if min_v <= hmc_version <= max_v:
+                            results.append({"region": entry_region, "rmob_dvn": entry_dvn})
 
-    return {"matches": results} if results else \
-        {"message": "No matching version found"}
+    return {"catalog_version": hmc_version, "catalog_hrn": catalog_hrn, "matches": results} if results else \
+        {"message": "No matching version found",
+         "catalog_version": hmc_version}
 
 
 def get_hmc_dvn_query_worker(dvn, region=None):
